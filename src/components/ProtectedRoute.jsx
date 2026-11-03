@@ -1,17 +1,12 @@
-import { useEffect, useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import { isSupabaseConfigured, supabase } from '../lib/supabaseClient'
+import { useApp } from '../context/AppContext'
 
 export default function ProtectedRoute() {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(isSupabaseConfigured)
-  useEffect(() => {
-    if (!supabase) return
-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setLoading(false) })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
-    return () => listener.subscription.unsubscribe()
-  }, [])
-  if (!isSupabaseConfigured) return <Outlet />
-  if (loading) return <div className="route-loading">Loading your workspace…</div>
-  return session ? <Outlet /> : <Navigate to="/login" replace />
+  const { session, authLoading, error } = useApp()
+  if (authLoading) return <div className="route-loading">Loading your session…</div>
+  if (!session) {
+    if (error?.includes('Supabase is not configured')) return <div className="route-loading">{error}</div>
+    return <Navigate to="/login" replace />
+  }
+  return <Outlet />
 }
